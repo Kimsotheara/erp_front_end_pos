@@ -111,7 +111,7 @@ export const RESOURCES = {
       { key: 'name', label: 'Name' },
       { key: 'barcode', label: 'Barcode' },
       { key: 'costPrice', label: 'Cost', type: 'money' },
-      { key: 'isActive', label: 'Active', type: 'bool' },
+      { key: 'isActive', label: 'Active', type: 'bool', toggle: true },
     ],
     fields: [
       { key: 'sku', label: 'SKU', type: 'text', required: true },
@@ -138,7 +138,7 @@ export const RESOURCES = {
     columns: [
       IMG_COL,
       { key: 'name', label: 'Name' },
-      { key: 'isActive', label: 'Active', type: 'bool' },
+      { key: 'isActive', label: 'Active', type: 'bool', toggle: true },
     ],
     fields: [
       { key: 'name', label: 'Name', type: 'text', required: true },
@@ -155,7 +155,7 @@ export const RESOURCES = {
     columns: [
       IMG_COL,
       { key: 'name', label: 'Name' },
-      { key: 'isActive', label: 'Active', type: 'bool' },
+      { key: 'isActive', label: 'Active', type: 'bool', toggle: true },
     ],
     fields: [
       { key: 'name', label: 'Name', type: 'text', required: true },
@@ -243,6 +243,7 @@ export const RESOURCES = {
       { key: 'phone', label: 'Phone' },
       { key: 'membershipTier', label: 'Tier' },
       { key: 'loyaltyBalance', label: 'Points' },
+      { key: 'isActive', label: 'Active', type: 'bool', toggle: true },
     ],
     fields: [
       { key: 'code', label: 'Code', type: 'text' },
@@ -327,7 +328,7 @@ export const RESOURCES = {
       { key: 'username', label: 'Username' },
       { key: 'fullName', label: 'Full name' },
       { key: 'email', label: 'Email' },
-      { key: 'isActive', label: 'Active', type: 'bool' },
+      { key: 'isActive', label: 'Active', type: 'bool', toggle: true },
     ],
     fields: [
       { key: 'username', label: 'Username', type: 'text', required: true },

@@ -174,6 +174,21 @@ async function changeStatus(row, status) {
   }
 }
 
+// One-click active/deactivate via PATCH /{path}/{id}/status { isActive } for
+// columns flagged `toggle: true`.
+async function toggleActive(row, col) {
+  const previous = row[col.key]
+  const next = !previous
+  row[col.key] = next // optimistic
+  try {
+    await http.patch(`${conf.value.path}/${row.id}/status`, { [col.key]: next })
+    toast.success(next ? `${conf.value.singular} activated` : `${conf.value.singular} deactivated`)
+  } catch (e) {
+    row[col.key] = previous // revert
+    toast.error(e.message)
+  }
+}
+
 function renderCell(row, col) {
   const v = row[col.key]
   if (col.type === 'money') return money(v)
@@ -226,6 +241,18 @@ onMounted(fetchList)
               >
                 <option v-for="s in conf.inlineStatus.options" :key="s" :value="s">{{ s }}</option>
               </select>
+              <button
+                v-else-if="col.type === 'bool' && col.toggle"
+                type="button"
+                role="switch"
+                :aria-checked="!!row[col.key]"
+                :title="row[col.key] ? 'Active — click to deactivate' : 'Inactive — click to activate'"
+                class="relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-brand-400 focus:ring-offset-1"
+                :class="row[col.key] ? 'bg-emerald-500' : 'bg-slate-300'"
+                @click="toggleActive(row, col)"
+              >
+                <span class="inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform" :class="row[col.key] ? 'translate-x-4' : 'translate-x-1'" />
+              </button>
               <span v-else-if="col.type === 'bool'" class="badge" :class="row[col.key] ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-500'">
                 {{ row[col.key] ? 'Yes' : 'No' }}
               </span>
