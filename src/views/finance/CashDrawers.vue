@@ -30,6 +30,7 @@ const manageOpen = ref(false)
 const moveForm = reactive({ direction: 'IN', amount: 0, reason: '' })
 const closeForm = reactive({ countedBalance: 0 })
 const busy = ref(false)
+const err = reactive({})
 
 async function load() {
   loading.value = true
@@ -45,10 +46,15 @@ async function load() {
 }
 
 function openOpen() {
+  Object.keys(err).forEach((k) => delete err[k])
   Object.assign(openForm, { branchId: branches.value[0]?.id ?? null, openingBalance: 0 })
   openModal.value = true
 }
 async function doOpen() {
+  if (!openForm.branchId) {
+    err.branchId = 'Branch is required'
+    return
+  }
   busy.value = true
   try {
     await http.post('/cash-drawers/open', { branchId: openForm.branchId, openedBy: auth.user?.id || undefined, openingBalance: Number(openForm.openingBalance) || 0 })
@@ -64,11 +70,17 @@ async function doOpen() {
 
 function manage(row) {
   drawer.value = row
+  Object.keys(err).forEach((k) => delete err[k])
   Object.assign(moveForm, { direction: 'IN', amount: 0, reason: '' })
   Object.assign(closeForm, { countedBalance: 0 })
   manageOpen.value = true
 }
 async function addMovement() {
+  err.amount = ''
+  if (!(Number(moveForm.amount) > 0)) {
+    err.amount = 'Enter an amount greater than 0'
+    return
+  }
   busy.value = true
   try {
     await http.post(`/cash-drawers/${drawer.value.id}/movements`, { direction: moveForm.direction, amount: Number(moveForm.amount), reason: moveForm.reason || undefined, createdBy: auth.user?.id || undefined })
@@ -82,6 +94,11 @@ async function addMovement() {
   }
 }
 async function closeDrawer() {
+  err.countedBalance = ''
+  if (closeForm.countedBalance == null || closeForm.countedBalance === '' || Number(closeForm.countedBalance) < 0) {
+    err.countedBalance = 'Enter the counted cash amount'
+    return
+  }
   busy.value = true
   try {
     await http.post(`/cash-drawers/${drawer.value.id}/close`, { closedBy: auth.user?.id || undefined, countedBalance: Number(closeForm.countedBalance) })
@@ -130,7 +147,11 @@ onMounted(async () => {
 
     <Modal v-model="openModal" title="Open cash drawer" size="sm">
       <div class="space-y-3">
-        <div><label class="label">Branch</label><select v-model.number="openForm.branchId" class="input"><option v-for="b in branches" :key="b.id" :value="b.id">{{ b.name }}</option></select></div>
+        <div>
+          <label class="label">Branch <span class="text-rose-500">*</span></label>
+          <select v-model.number="openForm.branchId" class="input" :class="{ '!border-rose-400': err.branchId }" @change="err.branchId = ''"><option :value="null">— select —</option><option v-for="b in branches" :key="b.id" :value="b.id">{{ b.name }}</option></select>
+          <p v-if="err.branchId" class="mt-1 text-xs text-rose-500">{{ err.branchId }}</p>
+        </div>
         <div><label class="label">Opening float</label><input v-model.number="openForm.openingBalance" type="number" step="any" class="input" /></div>
       </div>
       <template #footer>
@@ -145,17 +166,19 @@ onMounted(async () => {
           <p class="label">Record cash movement</p>
           <div class="flex items-center gap-2">
             <select v-model="moveForm.direction" class="input w-28"><option value="IN">Pay-in</option><option value="OUT">Pay-out</option></select>
-            <input v-model.number="moveForm.amount" type="number" step="any" class="input w-32" placeholder="Amount" />
+            <input v-model.number="moveForm.amount" type="number" step="any" class="input w-32" placeholder="Amount" :class="{ '!border-rose-400': err.amount }" @input="err.amount = ''" />
             <input v-model="moveForm.reason" class="input flex-1" placeholder="Reason" />
             <button class="btn-secondary" :disabled="busy" @click="addMovement">Add</button>
           </div>
+          <p v-if="err.amount" class="mt-1 text-xs text-rose-500">{{ err.amount }}</p>
         </div>
         <div class="border-t border-slate-200 pt-4">
           <p class="label">Close drawer</p>
           <div class="flex items-center gap-2">
-            <input v-model.number="closeForm.countedBalance" type="number" step="any" class="input flex-1" placeholder="Counted cash" />
+            <input v-model.number="closeForm.countedBalance" type="number" step="any" class="input flex-1" placeholder="Counted cash" :class="{ '!border-rose-400': err.countedBalance }" @input="err.countedBalance = ''" />
             <button class="btn-danger" :disabled="busy" @click="closeDrawer">Close drawer</button>
           </div>
+          <p v-if="err.countedBalance" class="mt-1 text-xs text-rose-500">{{ err.countedBalance }}</p>
         </div>
       </div>
       <template #footer>

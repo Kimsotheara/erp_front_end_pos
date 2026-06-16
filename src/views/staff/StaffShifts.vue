@@ -28,6 +28,7 @@ const shifts = ref([])
 const rosterOpen = ref(false)
 const saving = ref(false)
 const form = reactive({ branchId: null, userId: null, shiftId: null, shiftDate: '', note: '' })
+const err = reactive({})
 
 async function load() {
   loading.value = true
@@ -43,11 +44,16 @@ async function load() {
 }
 
 function openRoster() {
+  Object.keys(err).forEach((k) => delete err[k])
   Object.assign(form, { branchId: branches.value[0]?.id ?? null, userId: users.value[0]?.id ?? null, shiftId: shifts.value[0]?.id ?? null, shiftDate: new Date().toISOString().slice(0, 10), note: '' })
   rosterOpen.value = true
 }
 async function save() {
-  if (!form.userId || !form.branchId) return toast.warn('Pick a staff member and branch')
+  Object.keys(err).forEach((k) => delete err[k])
+  if (!form.branchId) err.branchId = 'Branch is required'
+  if (!form.userId) err.userId = 'Staff member is required'
+  if (!form.shiftDate) err.shiftDate = 'Date is required'
+  if (Object.keys(err).length) return
   saving.value = true
   try {
     await api.create({
@@ -139,10 +145,22 @@ onMounted(async () => {
 
     <Modal v-model="rosterOpen" title="Roster a shift" size="md">
       <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <div><label class="label">Branch</label><select v-model.number="form.branchId" class="input"><option v-for="b in branches" :key="b.id" :value="b.id">{{ b.name }}</option></select></div>
-        <div><label class="label">Staff</label><select v-model.number="form.userId" class="input"><option v-for="u in users" :key="u.id" :value="u.id">{{ u.fullName || u.username }}</option></select></div>
+        <div>
+          <label class="label">Branch <span class="text-rose-500">*</span></label>
+          <select v-model.number="form.branchId" class="input" :class="{ '!border-rose-400': err.branchId }" @change="err.branchId = ''"><option :value="null">— select —</option><option v-for="b in branches" :key="b.id" :value="b.id">{{ b.name }}</option></select>
+          <p v-if="err.branchId" class="mt-1 text-xs text-rose-500">{{ err.branchId }}</p>
+        </div>
+        <div>
+          <label class="label">Staff <span class="text-rose-500">*</span></label>
+          <select v-model.number="form.userId" class="input" :class="{ '!border-rose-400': err.userId }" @change="err.userId = ''"><option :value="null">— select —</option><option v-for="u in users" :key="u.id" :value="u.id">{{ u.fullName || u.username }}</option></select>
+          <p v-if="err.userId" class="mt-1 text-xs text-rose-500">{{ err.userId }}</p>
+        </div>
         <div><label class="label">Shift template</label><select v-model.number="form.shiftId" class="input"><option :value="null">— none —</option><option v-for="s in shifts" :key="s.id" :value="s.id">{{ s.name }}</option></select></div>
-        <div><label class="label">Date</label><input v-model="form.shiftDate" type="date" class="input" /></div>
+        <div>
+          <label class="label">Date <span class="text-rose-500">*</span></label>
+          <input v-model="form.shiftDate" type="date" class="input" :class="{ '!border-rose-400': err.shiftDate }" @input="err.shiftDate = ''" />
+          <p v-if="err.shiftDate" class="mt-1 text-xs text-rose-500">{{ err.shiftDate }}</p>
+        </div>
         <div class="sm:col-span-2"><label class="label">Note</label><input v-model="form.note" class="input" /></div>
       </div>
       <template #footer>

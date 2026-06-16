@@ -63,6 +63,8 @@ function addLine() {
 async function save() {
   const lines = form.lines.filter((l) => l.productId)
   if (!form.supplierId || !lines.length) return toast.warn('Pick a supplier and at least one product')
+  if (lines.some((l) => !(Number(l.quantity) > 0))) return toast.warn('Every line needs a quantity greater than 0')
+  if (lines.some((l) => Number(l.unitCost) < 0)) return toast.warn('Unit cost cannot be negative')
   saving.value = true
   try {
     await api.create({
@@ -150,7 +152,7 @@ onMounted(async () => {
       <div class="space-y-4">
         <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div><label class="label">Branch</label><select v-model.number="form.branchId" class="input"><option v-for="b in branches" :key="b.id" :value="b.id">{{ b.name }}</option></select></div>
-          <div><label class="label">Supplier</label><select v-model.number="form.supplierId" class="input"><option v-for="s in suppliers" :key="s.id" :value="s.id">{{ s.name }}</option></select></div>
+          <div><label class="label">Supplier <span class="text-rose-500">*</span></label><select v-model.number="form.supplierId" class="input" :class="{ '!border-rose-400': !form.supplierId }"><option :value="null">— select —</option><option v-for="s in suppliers" :key="s.id" :value="s.id">{{ s.name }}</option></select></div>
           <div><label class="label">Order date</label><input v-model="form.orderDate" type="date" class="input" /></div>
           <div><label class="label">Expected date</label><input v-model="form.expectedDate" type="date" class="input" /></div>
         </div>
@@ -158,8 +160,8 @@ onMounted(async () => {
           <div class="mb-1 flex items-center justify-between"><label class="label mb-0">Line items</label><button class="text-sm font-medium text-brand-600 hover:underline" @click="addLine">+ Add line</button></div>
           <div v-for="(l, i) in form.lines" :key="i" class="mb-2 flex items-center gap-2">
             <select v-model.number="l.productId" class="input flex-1"><option :value="null">— product —</option><option v-for="p in products" :key="p.id" :value="p.id">{{ p.name }}</option></select>
-            <input v-model.number="l.quantity" type="number" step="any" class="input w-24" placeholder="Qty" />
-            <input v-model.number="l.unitCost" type="number" step="any" class="input w-28" placeholder="Unit cost" />
+            <input v-model.number="l.quantity" type="number" step="any" class="input w-24" placeholder="Qty" :class="{ '!border-rose-400': l.productId && !(Number(l.quantity) > 0) }" />
+            <input v-model.number="l.unitCost" type="number" step="any" class="input w-28" placeholder="Unit cost" :class="{ '!border-rose-400': l.productId && Number(l.unitCost) < 0 }" />
             <button class="btn-ghost p-1 text-rose-500" @click="form.lines.splice(i, 1)"><Icon name="x" size="14" /></button>
           </div>
         </div>

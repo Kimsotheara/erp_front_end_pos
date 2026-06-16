@@ -29,6 +29,7 @@ const loading = ref(false)
 const modalOpen = ref(false)
 const editing = ref(null)
 const form = reactive({})
+const errors = reactive({})
 const saving = ref(false)
 
 const confirmOpen = ref(false)
@@ -58,7 +59,12 @@ async function fetchList() {
   }
 }
 
+function clearErrors() {
+  Object.keys(errors).forEach((k) => delete errors[k])
+}
+
 function blankForm() {
+  clearErrors()
   Object.keys(form).forEach((k) => delete form[k])
   for (const f of conf.value.fields) {
     const empty = f.type === 'checkbox' ? false : f.type === 'multiref' || f.type === 'subform' ? [] : null
@@ -85,12 +91,21 @@ function openEdit(row) {
   modalOpen.value = true
 }
 
+function isEmpty(v) {
+  return v == null || v === '' || (Array.isArray(v) && v.length === 0)
+}
+
 function validate() {
+  clearErrors()
   for (const f of conf.value.fields) {
-    if (f.required && (form[f.key] == null || form[f.key] === '')) {
-      toast.error(`${f.label} is required`)
-      return false
+    if (f.required && isEmpty(form[f.key])) {
+      errors[f.key] = `${f.label} is required`
     }
+  }
+  const count = Object.keys(errors).length
+  if (count) {
+    toast.error(`Please fill in ${count} required field${count === 1 ? '' : 's'}`)
+    return false
   }
   return true
 }
@@ -236,7 +251,7 @@ onMounted(fetchList)
     <!-- Create / edit modal -->
     <Modal v-model="modalOpen" :title="(editing ? 'Edit ' : 'New ') + conf.singular" size="lg">
       <form class="grid grid-cols-1 gap-4 sm:grid-cols-2" @submit.prevent="save">
-        <FormField v-for="f in conf.fields" :key="f.key" :field="f" v-model="form[f.key]" />
+        <FormField v-for="f in conf.fields" :key="f.key" :field="f" v-model="form[f.key]" :error="errors[f.key]" @update:model-value="errors[f.key] = ''" />
       </form>
       <template #footer>
         <button class="btn-secondary" @click="modalOpen = false">Cancel</button>

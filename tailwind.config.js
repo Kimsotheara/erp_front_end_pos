@@ -18,7 +18,8 @@ export default {
         },
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
+        sans: ['Inter', 'Noto Sans Khmer', 'system-ui', 'sans-serif'],
+        khmer: ['Noto Sans Khmer', 'Inter', 'system-ui', 'sans-serif'],
       },
     },
   },

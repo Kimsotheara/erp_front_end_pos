@@ -21,6 +21,7 @@ const opModal = ref(false)
 const opType = ref('stock-in')
 const saving = ref(false)
 const form = reactive({ warehouseId: null, productId: null, quantity: null, countedQuantity: null, unitCost: null, note: '' })
+const opErr = reactive({})
 
 // movements ledger
 const movements = ref([])
@@ -45,18 +46,29 @@ const OPS = {
 
 function openOp(type) {
   opType.value = type
+  Object.keys(opErr).forEach((k) => delete opErr[k])
   Object.assign(form, { warehouseId: warehouses.value[0]?.id ?? null, productId: null, quantity: null, countedQuantity: null, unitCost: null, note: '' })
   opModal.value = true
 }
 
 async function submitOp() {
   const op = OPS[opType.value]
+  Object.keys(opErr).forEach((k) => delete opErr[k])
+  if (!form.warehouseId) opErr.warehouseId = 'Warehouse is required'
+  if (!form.productId) opErr.productId = 'Product is required'
+  if (opType.value === 'adjust') {
+    if (form.countedQuantity == null || form.countedQuantity === '' || Number(form.countedQuantity) < 0)
+      opErr.countedQuantity = 'Enter the counted quantity'
+  } else if (!(Number(form.quantity) > 0)) {
+    opErr.quantity = 'Enter a quantity greater than 0'
+  }
+  if (Object.keys(opErr).length) return
+
   const payload = { warehouseId: form.warehouseId, productId: form.productId, note: form.note || undefined }
   if (opType.value === 'adjust') payload.countedQuantity = Number(form.countedQuantity)
   else payload.quantity = Number(form.quantity)
   if (opType.value === 'stock-in') payload.unitCost = form.unitCost != null ? Number(form.unitCost) : undefined
 
-  if (!payload.warehouseId || !payload.productId) return toast.warn('Select warehouse and product')
   saving.value = true
   try {
     await http.post(op.path, payload)
@@ -206,25 +218,30 @@ onMounted(async () => {
     <Modal v-model="opModal" :title="OPS[opType].title" size="sm">
       <div class="space-y-3">
         <div>
-          <label class="label">Warehouse</label>
-          <select v-model.number="form.warehouseId" class="input">
+          <label class="label">Warehouse <span class="text-rose-500">*</span></label>
+          <select v-model.number="form.warehouseId" class="input" :class="{ '!border-rose-400': opErr.warehouseId }" @change="opErr.warehouseId = ''">
+            <option :value="null">— select —</option>
             <option v-for="w in warehouses" :key="w.id" :value="w.id">{{ w.name }}</option>
           </select>
+          <p v-if="opErr.warehouseId" class="mt-1 text-xs text-rose-500">{{ opErr.warehouseId }}</p>
         </div>
         <div>
-          <label class="label">Product</label>
-          <select v-model.number="form.productId" class="input">
+          <label class="label">Product <span class="text-rose-500">*</span></label>
+          <select v-model.number="form.productId" class="input" :class="{ '!border-rose-400': opErr.productId }" @change="opErr.productId = ''">
             <option :value="null">— select —</option>
             <option v-for="p in products" :key="p.id" :value="p.id">{{ p.name }}</option>
           </select>
+          <p v-if="opErr.productId" class="mt-1 text-xs text-rose-500">{{ opErr.productId }}</p>
         </div>
         <div v-if="opType === 'adjust'">
-          <label class="label">Counted quantity</label>
-          <input v-model.number="form.countedQuantity" type="number" step="any" class="input" />
+          <label class="label">Counted quantity <span class="text-rose-500">*</span></label>
+          <input v-model.number="form.countedQuantity" type="number" step="any" class="input" :class="{ '!border-rose-400': opErr.countedQuantity }" @input="opErr.countedQuantity = ''" />
+          <p v-if="opErr.countedQuantity" class="mt-1 text-xs text-rose-500">{{ opErr.countedQuantity }}</p>
         </div>
         <div v-else>
-          <label class="label">Quantity</label>
-          <input v-model.number="form.quantity" type="number" step="any" class="input" />
+          <label class="label">Quantity <span class="text-rose-500">*</span></label>
+          <input v-model.number="form.quantity" type="number" step="any" class="input" :class="{ '!border-rose-400': opErr.quantity }" @input="opErr.quantity = ''" />
+          <p v-if="opErr.quantity" class="mt-1 text-xs text-rose-500">{{ opErr.quantity }}</p>
         </div>
         <div v-if="opType === 'stock-in'">
           <label class="label">Unit cost (optional)</label>

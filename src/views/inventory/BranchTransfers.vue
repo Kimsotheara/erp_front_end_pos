@@ -64,6 +64,8 @@ function addLine() {
 async function save() {
   const lines = form.lines.filter((l) => l.productId)
   if (!lines.length) return toast.warn('Add at least one product')
+  if (form.fromWarehouseId === form.toWarehouseId) return toast.warn('Source and destination warehouses must differ')
+  if (lines.some((l) => !(Number(l.quantity) > 0))) return toast.warn('Every line needs a quantity greater than 0')
   saving.value = true
   try {
     await api.create({
@@ -156,7 +158,7 @@ onMounted(async () => {
           <div class="mb-1 flex items-center justify-between"><label class="label mb-0">Items</label><button class="text-sm font-medium text-brand-600 hover:underline" @click="addLine">+ Add line</button></div>
           <div v-for="(l, i) in form.lines" :key="i" class="mb-2 flex items-center gap-2">
             <select v-model.number="l.productId" class="input flex-1"><option :value="null">— product —</option><option v-for="p in products" :key="p.id" :value="p.id">{{ p.name }}</option></select>
-            <input v-model.number="l.quantity" type="number" step="any" class="input w-24" placeholder="Qty" />
+            <input v-model.number="l.quantity" type="number" step="any" class="input w-24" placeholder="Qty" :class="{ '!border-rose-400': l.productId && !(Number(l.quantity) > 0) }" />
             <button class="btn-ghost p-1 text-rose-500" @click="form.lines.splice(i, 1)"><Icon name="x" size="14" /></button>
           </div>
         </div>

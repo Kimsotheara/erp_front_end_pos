@@ -7,6 +7,7 @@ import Icon from '@/components/ui/Icon.vue'
 const props = defineProps({
   field: { type: Object, required: true },
   modelValue: [String, Number, Boolean, Array, Object, null],
+  error: { type: String, default: '' },
 })
 const emit = defineEmits(['update:modelValue'])
 
@@ -79,7 +80,7 @@ function setRowField(i, key, value) {
 </script>
 
 <template>
-  <div :class="field.type === 'textarea' || field.type === 'subform' ? 'sm:col-span-2' : ''">
+  <div :class="[field.type === 'textarea' || field.type === 'subform' ? 'sm:col-span-2' : '', error ? 'field-invalid' : '']">
     <label class="label">
       {{ field.label }}
       <span v-if="field.required" class="text-rose-500">*</span>
@@ -178,6 +179,7 @@ function setRowField(i, key, value) {
     <!-- text (default) -->
     <input v-else type="text" class="input" :value="modelValue ?? ''" @input="onInput" />
 
-    <p v-if="field.hint" class="mt-1 text-xs text-slate-400">{{ field.hint }}</p>
+    <p v-if="error" class="mt-1 text-xs text-rose-500">{{ error }}</p>
+    <p v-else-if="field.hint" class="mt-1 text-xs text-slate-400">{{ field.hint }}</p>
   </div>
 </template>

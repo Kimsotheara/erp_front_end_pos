@@ -67,6 +67,18 @@ const tendered = computed(() => payments.reduce((s, p) => s + (Number(p.amount) 
 const change = computed(() => Math.max(0, tendered.value - total.value))
 const submitting = ref(false)
 
+// Per-row payment validation: each line needs a method and a positive amount.
+const paymentRowErrors = computed(() =>
+  payments.map((p) => {
+    if (!p.paymentMethodId) return 'Select a payment method'
+    if (!(Number(p.amount) > 0)) return 'Enter an amount'
+    return ''
+  }),
+)
+const paymentsValid = computed(
+  () => payments.length > 0 && paymentRowErrors.value.every((e) => !e) && tendered.value >= total.value,
+)
+
 function addToCart(p) {
   const existing = cart.find((l) => l.productId === p.id)
   if (existing) existing.quantity += 1
@@ -107,7 +119,9 @@ function addPayment() {
 }
 
 async function checkout() {
-  if (tendered.value < total.value) return toast.warn('Insufficient payment')
+  if (!paymentsValid.value) {
+    return toast.warn(tendered.value < total.value ? 'Insufficient payment' : 'Each payment needs a method and amount')
+  }
   submitting.value = true
   try {
     const payload = {
@@ -277,12 +291,16 @@ onMounted(async () => {
           <p class="text-3xl font-bold text-slate-800">{{ money(total) }}</p>
         </div>
 
-        <div v-for="(p, i) in payments" :key="i" class="flex items-center gap-2">
-          <select v-model.number="p.paymentMethodId" class="input flex-1 py-1.5 text-sm">
-            <option v-for="m in paymentMethods" :key="m.id" :value="m.id">{{ m.name }}</option>
-          </select>
-          <input v-model.number="p.amount" type="number" step="any" class="input w-32 py-1.5 text-sm text-right" />
-          <button v-if="payments.length > 1" class="btn-ghost p-1 text-rose-500" @click="payments.splice(i, 1)"><Icon name="x" size="14" /></button>
+        <div v-for="(p, i) in payments" :key="i">
+          <div class="flex items-center gap-2">
+            <select v-model.number="p.paymentMethodId" class="input flex-1 py-1.5 text-sm" :class="{ '!border-rose-400': paymentRowErrors[i] }">
+              <option :value="null" disabled>— method —</option>
+              <option v-for="m in paymentMethods" :key="m.id" :value="m.id">{{ m.name }}</option>
+            </select>
+            <input v-model.number="p.amount" type="number" step="any" class="input w-32 py-1.5 text-sm text-right" :class="{ '!border-rose-400': paymentRowErrors[i] }" />
+            <button v-if="payments.length > 1" class="btn-ghost p-1 text-rose-500" @click="payments.splice(i, 1)"><Icon name="x" size="14" /></button>
+          </div>
+          <p v-if="paymentRowErrors[i]" class="mt-1 text-xs text-rose-500">{{ paymentRowErrors[i] }}</p>
         </div>
         <button class="text-sm font-medium text-brand-600 hover:underline" @click="addPayment">+ Split payment</button>
 
@@ -295,7 +313,7 @@ onMounted(async () => {
       </div>
       <template #footer>
         <button class="btn-secondary" @click="paymentModal = false">Cancel</button>
-        <button class="btn-primary" :disabled="submitting || tendered < total" @click="checkout">
+        <button class="btn-primary" :disabled="submitting || !paymentsValid" @click="checkout">
           <Spinner v-if="submitting" size="16" /> Complete sale
         </button>
       </template>

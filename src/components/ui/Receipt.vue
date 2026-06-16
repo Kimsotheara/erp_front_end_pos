@@ -11,6 +11,7 @@ const props = defineProps({
 })
 
 const inv = computed(() => props.invoice || {})
+const logo = computed(() => pick(props.company, ['logoUrl', 'image']))
 const number = computed(() => pick(inv.value, ['invoiceNo', 'invoiceNumber', 'number'], inv.value.id))
 const when = computed(() => datetime(pick(inv.value, ['createdAt', 'invoiceDate', 'date'])))
 const lines = computed(() => firstArray(inv.value, ['items', 'invoiceItems', 'lines']))
@@ -39,6 +40,7 @@ function methodName(p) {
 <template>
   <div class="receipt-print mx-auto max-w-xs font-mono text-xs text-slate-800">
     <div class="text-center">
+      <img v-if="logo" :src="logo" alt="logo" class="mx-auto mb-1 h-14 w-auto max-w-[160px] object-contain" />
       <p class="text-sm font-bold uppercase">{{ company?.name || 'ERP POS' }}</p>
       <p v-if="company?.address" class="text-slate-500">{{ company.address }}</p>
       <p v-if="company?.phone" class="text-slate-500">Tel: {{ company.phone }}</p>

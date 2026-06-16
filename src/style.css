@@ -9,7 +9,11 @@
     height: 100%;
   }
   body {
-    @apply bg-slate-100 text-slate-800 antialiased;
+    @apply bg-slate-100 text-slate-800 antialiased font-sans;
+  }
+  /* Khmer glyphs (subscripts/diacritics) need a little more vertical room. */
+  :lang(km) {
+    line-height: 1.7;
   }
 }
 
@@ -35,6 +39,14 @@
   .label {
     @apply mb-1 block text-sm font-medium text-slate-700;
   }
+  /* Highlight an invalid field's control(s) in red. */
+  .field-invalid .input,
+  .field-invalid > div {
+    @apply border-rose-400;
+  }
+  .field-invalid .input:focus {
+    @apply border-rose-500 ring-rose-300;
+  }
   .card {
     @apply rounded-xl border border-slate-200 bg-white shadow-sm;
   }
@@ -43,20 +55,29 @@
   }
 }
 
-/* Print only the receipt; hide the rest of the app. */
+/* Print only the receipt or a report; hide the rest of the app. */
 @media print {
   body * {
     visibility: hidden;
   }
   .receipt-print,
-  .receipt-print * {
+  .receipt-print *,
+  .report-print,
+  .report-print * {
     visibility: visible;
   }
-  .receipt-print {
+  .receipt-print,
+  .report-print {
     position: absolute;
     left: 0;
     top: 0;
     width: 100%;
     padding: 1rem;
+  }
+  /* Keep logos/colours when printing. */
+  .receipt-print img,
+  .report-print img {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
 }

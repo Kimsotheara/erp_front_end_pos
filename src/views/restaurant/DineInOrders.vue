@@ -56,7 +56,18 @@ const tableName = (t) => pick(t, ['name', 'code'], `#${t.id}`)
 const billLines = computed(() => firstArray(bill.value, ['items', 'invoiceItems', 'lines']))
 const billTotal = computed(() => Number(pick(bill.value, ['totalAmount', 'total', 'grandTotal'], 0)) || 0)
 const tendered = computed(() => payments.reduce((s, p) => s + (Number(p.amount) || 0), 0))
-const change = computed(() => Math.max(0, tendered.value - (billTotal.value - (Number(settleDiscount.value) || 0))))
+const settleDue = computed(() => Math.max(0, billTotal.value - (Number(settleDiscount.value) || 0)))
+const change = computed(() => Math.max(0, tendered.value - settleDue.value))
+const settleRowErrors = computed(() =>
+  payments.map((p) => {
+    if (!p.paymentMethodId) return 'Select a payment method'
+    if (!(Number(p.amount) > 0)) return 'Enter an amount'
+    return ''
+  }),
+)
+const settleValid = computed(
+  () => payments.length > 0 && settleRowErrors.value.every((e) => !e) && tendered.value >= settleDue.value,
+)
 
 async function loadRefs() {
   try {
@@ -150,6 +161,7 @@ function removeNewLine(i) {
 
 async function fireToKitchen() {
   if (!newLines.length) return toast.warn('Add at least one item')
+  if (newLines.some((l) => !(Number(l.quantity) > 0))) return toast.warn('Every item needs a quantity greater than 0')
   firing.value = true
   try {
     await http.post(`/orders/${invoiceId.value}/items`, {
@@ -185,6 +197,9 @@ function addPayment() {
 
 async function settleBill() {
   if (!settleWarehouse.value) return toast.warn('Select a warehouse')
+  if (!settleValid.value) {
+    return toast.warn(tendered.value < settleDue.value ? 'Insufficient payment' : 'Each payment needs a method and amount')
+  }
   settling.value = true
   try {
     await http.post(`/orders/${invoiceId.value}/settle`, {
@@ -353,12 +368,16 @@ onMounted(loadRefs)
             <input v-model.number="settleDiscount" type="number" min="0" step="any" class="input py-1.5 text-sm text-right" />
           </div>
         </div>
-        <div v-for="(p, i) in payments" :key="i" class="flex items-center gap-2">
-          <select v-model.number="p.paymentMethodId" class="input flex-1 py-1.5 text-sm">
-            <option v-for="m in paymentMethods" :key="m.id" :value="m.id">{{ m.name }}</option>
-          </select>
-          <input v-model.number="p.amount" type="number" step="any" class="input w-32 py-1.5 text-right text-sm" />
-          <button v-if="payments.length > 1" class="btn-ghost p-1 text-rose-500" @click="payments.splice(i, 1)"><Icon name="x" size="14" /></button>
+        <div v-for="(p, i) in payments" :key="i">
+          <div class="flex items-center gap-2">
+            <select v-model.number="p.paymentMethodId" class="input flex-1 py-1.5 text-sm" :class="{ '!border-rose-400': settleRowErrors[i] }">
+              <option :value="null" disabled>— method —</option>
+              <option v-for="m in paymentMethods" :key="m.id" :value="m.id">{{ m.name }}</option>
+            </select>
+            <input v-model.number="p.amount" type="number" step="any" class="input w-32 py-1.5 text-right text-sm" :class="{ '!border-rose-400': settleRowErrors[i] }" />
+            <button v-if="payments.length > 1" class="btn-ghost p-1 text-rose-500" @click="payments.splice(i, 1)"><Icon name="x" size="14" /></button>
+          </div>
+          <p v-if="settleRowErrors[i]" class="mt-1 text-xs text-rose-500">{{ settleRowErrors[i] }}</p>
         </div>
         <button class="text-sm font-medium text-brand-600 hover:underline" @click="addPayment">+ Split payment</button>
         <div class="flex justify-between border-t border-slate-200 pt-2 text-sm">
@@ -367,7 +386,7 @@ onMounted(loadRefs)
       </div>
       <template #footer>
         <button class="btn-secondary" @click="settleOpen = false">Cancel</button>
-        <button class="btn-primary" :disabled="settling" @click="settleBill"><Spinner v-if="settling" size="16" /> Complete payment</button>
+        <button class="btn-primary" :disabled="settling || !settleValid" @click="settleBill"><Spinner v-if="settling" size="16" /> Complete payment</button>
       </template>
     </Modal>
   </div>
