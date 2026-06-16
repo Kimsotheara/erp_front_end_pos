@@ -10,7 +10,8 @@
 import { BUSINESS_TYPES } from './modules'
 
 const ACTIVE = { key: 'isActive', label: 'Active', type: 'checkbox', default: true }
-const IMAGE = { key: 'image', label: 'Image URL', type: 'text', hint: 'Optional image URL.' }
+const IMAGE = { key: 'image', label: 'Image', type: 'image' }
+const IMG_COL = { key: 'image', label: '', type: 'image' }
 
 export const RESOURCES = {
   // ---------------- Organization ----------------
@@ -19,6 +20,7 @@ export const RESOURCES = {
     title: 'Companies',
     singular: 'Company',
     columns: [
+      IMG_COL,
       { key: 'name', label: 'Name' },
       { key: 'businessType', label: 'Type', type: 'badge' },
       { key: 'phone', label: 'Phone' },
@@ -33,7 +35,7 @@ export const RESOURCES = {
       { key: 'phone', label: 'Phone', type: 'text' },
       { key: 'email', label: 'Email', type: 'text' },
       { key: 'address', label: 'Address', type: 'textarea' },
-      { key: 'logoUrl', label: 'Logo URL', type: 'text' },
+      { key: 'logoUrl', label: 'Logo', type: 'image' },
       IMAGE,
       ACTIVE,
     ],
@@ -104,6 +106,7 @@ export const RESOURCES = {
     singular: 'Product',
     companyScoped: true,
     columns: [
+      IMG_COL,
       { key: 'sku', label: 'SKU' },
       { key: 'name', label: 'Name' },
       { key: 'barcode', label: 'Barcode' },
@@ -133,6 +136,7 @@ export const RESOURCES = {
     singular: 'Category',
     companyScoped: true,
     columns: [
+      IMG_COL,
       { key: 'name', label: 'Name' },
       { key: 'isActive', label: 'Active', type: 'bool' },
     ],
@@ -149,6 +153,7 @@ export const RESOURCES = {
     singular: 'Brand',
     companyScoped: true,
     columns: [
+      IMG_COL,
       { key: 'name', label: 'Name' },
       { key: 'isActive', label: 'Active', type: 'bool' },
     ],
@@ -202,6 +207,7 @@ export const RESOURCES = {
     singular: 'Supplier',
     companyScoped: true,
     columns: [
+      IMG_COL,
       { key: 'code', label: 'Code' },
       { key: 'name', label: 'Name' },
       { key: 'phone', label: 'Phone' },
@@ -231,6 +237,7 @@ export const RESOURCES = {
     singular: 'Customer',
     companyScoped: true,
     columns: [
+      IMG_COL,
       { key: 'code', label: 'Code' },
       { key: 'name', label: 'Name' },
       { key: 'phone', label: 'Phone' },
@@ -316,6 +323,7 @@ export const RESOURCES = {
     singular: 'User',
     companyScoped: true,
     columns: [
+      IMG_COL,
       { key: 'username', label: 'Username' },
       { key: 'fullName', label: 'Full name' },
       { key: 'email', label: 'Email' },
@@ -444,6 +452,7 @@ export const RESOURCES = {
     feature: 'pub',
     companyScoped: true,
     columns: [
+      IMG_COL,
       { key: 'name', label: 'Name' },
       { key: 'category', label: 'Category' },
       { key: 'price', label: 'Price', type: 'money' },

@@ -215,6 +215,8 @@ onMounted(fetchList)
                 {{ row[col.key] ? 'Yes' : 'No' }}
               </span>
               <span v-else-if="col.type === 'badge' && row[col.key]" class="badge" :class="badgeClass(row[col.key])">{{ row[col.key] }}</span>
+              <img v-else-if="col.type === 'image' && row[col.key]" :src="row[col.key]" alt="" class="h-9 w-9 rounded-md border border-slate-200 object-cover" />
+              <span v-else-if="col.type === 'image'" class="flex h-9 w-9 items-center justify-center rounded-md bg-slate-100 text-slate-300"><Icon name="box" size="16" /></span>
               <template v-else>{{ renderCell(row, col) }}</template>
             </td>
             <td class="px-4 py-3 text-right">

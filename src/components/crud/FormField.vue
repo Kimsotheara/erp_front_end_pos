@@ -1,6 +1,8 @@
 <script setup>
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRefOptions } from '@/composables/useRefOptions'
+import SearchSelect from '@/components/ui/SearchSelect.vue'
+import Icon from '@/components/ui/Icon.vue'
 
 const props = defineProps({
   field: { type: Object, required: true },
@@ -25,9 +27,6 @@ function onInput(e) {
 function onNumber(e) {
   set(e.target.value === '' ? null : Number(e.target.value))
 }
-function onRef(e) {
-  set(e.target.value === '' ? null : Number(e.target.value))
-}
 function toggleMulti(val) {
   const arr = Array.isArray(props.modelValue) ? [...props.modelValue] : []
   const i = arr.indexOf(val)
@@ -35,6 +34,32 @@ function toggleMulti(val) {
   else arr.splice(i, 1)
   set(arr)
 }
+
+// ---- image upload (stored as a base64 data URL) ----
+const imgError = ref('')
+function onImageFile(e) {
+  const file = e.target.files?.[0]
+  e.target.value = '' // allow re-picking the same file
+  if (!file) return
+  const maxKB = props.field.maxKB || 1024
+  if (file.size > maxKB * 1024) {
+    imgError.value = `Image must be under ${maxKB} KB (this is ${Math.round(file.size / 1024)} KB).`
+    return
+  }
+  imgError.value = ''
+  const reader = new FileReader()
+  reader.onload = () => set(reader.result)
+  reader.onerror = () => (imgError.value = 'Could not read the file.')
+  reader.readAsDataURL(file)
+}
+
+// ---- multiref search filter ----
+const multiQuery = ref('')
+const filteredOptions = computed(() => {
+  const q = multiQuery.value.trim().toLowerCase()
+  if (!q) return options.value
+  return options.value.filter((o) => String(o.label).toLowerCase().includes(q))
+})
 
 // ---- subform (repeatable rows of itemFields) ----
 const rows = computed(() => (Array.isArray(props.modelValue) ? props.modelValue : []))
@@ -81,25 +106,59 @@ function setRowField(i, key, value) {
     <input v-else-if="field.type === 'password'" type="password" class="input" autocomplete="new-password" :value="modelValue ?? ''" @input="onInput" />
 
     <!-- select (static options) -->
-    <select v-else-if="field.type === 'select'" class="input" :value="modelValue ?? ''" @change="onInput">
-      <option value="">— select —</option>
-      <option v-for="o in field.options" :key="o.value" :value="o.value">{{ o.label }}</option>
-    </select>
+    <SearchSelect
+      v-else-if="field.type === 'select'"
+      :options="field.options"
+      :model-value="modelValue"
+      :clearable="!field.required"
+      @update:model-value="set"
+    />
 
     <!-- ref (single) -->
-    <select v-else-if="field.type === 'ref'" class="input" :value="modelValue ?? ''" :disabled="loading" @change="onRef">
-      <option value="">{{ loading ? 'Loading…' : '— select —' }}</option>
-      <option v-for="o in options" :key="o.value" :value="o.value">{{ o.label }}</option>
-    </select>
+    <SearchSelect
+      v-else-if="field.type === 'ref'"
+      :options="options"
+      :model-value="modelValue"
+      :loading="loading"
+      :clearable="!field.required"
+      @update:model-value="set"
+    />
 
     <!-- multiref -->
-    <div v-else-if="field.type === 'multiref'" class="max-h-40 overflow-y-auto rounded-lg border border-slate-300 p-2">
-      <p v-if="loading" class="text-sm text-slate-400">Loading…</p>
-      <p v-else-if="!options.length" class="text-sm text-slate-400">No options.</p>
-      <label v-for="o in options" :key="o.value" class="flex items-center gap-2 py-0.5 text-sm">
-        <input type="checkbox" class="h-4 w-4 rounded border-slate-300 text-brand-600" :checked="Array.isArray(modelValue) && modelValue.includes(o.value)" @change="toggleMulti(o.value)" />
-        {{ o.label }}
-      </label>
+    <div v-else-if="field.type === 'multiref'" class="rounded-lg border border-slate-300">
+      <div class="flex items-center gap-2 border-b border-slate-100 px-2.5 py-1.5">
+        <Icon name="search" size="14" class="text-slate-400" />
+        <input v-model="multiQuery" type="text" class="w-full bg-transparent text-sm focus:outline-none" placeholder="Search…" />
+      </div>
+      <div class="max-h-40 overflow-y-auto p-2">
+        <p v-if="loading" class="text-sm text-slate-400">Loading…</p>
+        <p v-else-if="!filteredOptions.length" class="py-2 text-center text-sm text-slate-400">No options.</p>
+        <label v-for="o in filteredOptions" :key="o.value" class="flex cursor-pointer items-center gap-2 rounded px-1 py-0.5 text-sm hover:bg-slate-50">
+          <input type="checkbox" class="h-4 w-4 rounded border-slate-300 text-brand-600" :checked="Array.isArray(modelValue) && modelValue.includes(o.value)" @change="toggleMulti(o.value)" />
+          {{ o.label }}
+        </label>
+      </div>
+    </div>
+
+    <!-- image upload (base64 data URL) -->
+    <div v-else-if="field.type === 'image'" class="space-y-2">
+      <div class="flex items-center gap-3">
+        <div class="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-dashed border-slate-300 bg-slate-50">
+          <img v-if="modelValue" :src="modelValue" alt="preview" class="h-full w-full object-cover" />
+          <Icon v-else name="box" size="22" class="text-slate-300" />
+        </div>
+        <div class="space-y-1.5">
+          <label class="btn-secondary cursor-pointer text-sm">
+            <Icon name="inbox" size="15" />
+            {{ modelValue ? 'Change image' : 'Browse image…' }}
+            <input type="file" accept="image/*" class="hidden" @change="onImageFile" />
+          </label>
+          <button v-if="modelValue" type="button" class="btn-ghost block p-1 text-xs text-rose-600 hover:bg-rose-50" @click="set(null); imgError = ''">
+            Remove
+          </button>
+        </div>
+      </div>
+      <p v-if="imgError" class="text-xs text-rose-500">{{ imgError }}</p>
     </div>
 
     <!-- subform (repeatable rows) -->
